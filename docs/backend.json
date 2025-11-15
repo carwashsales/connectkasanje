@@ -1,0 +1,418 @@
+{
+  "entities": {
+    "UserProfile": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "UserProfile",
+      "type": "object",
+      "description": "Represents a user's profile in the Connect Hub application.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the UserProfile entity."
+        },
+        "userName": {
+          "type": "string",
+          "description": "User's chosen username.",
+          "format": "string"
+        },
+        "fullName": {
+          "type": "string",
+          "description": "User's full name."
+        },
+        "email": {
+          "type": "string",
+          "description": "User's email address.",
+          "format": "email"
+        },
+        "phoneNumber": {
+          "type": "string",
+          "description": "User's phone number."
+        },
+        "profilePictureUrl": {
+          "type": "string",
+          "description": "URL to the user's profile picture.",
+          "format": "uri"
+        },
+        "bio": {
+          "type": "string",
+          "description": "A short biography or description of the user."
+        }
+      },
+      "required": [
+        "id",
+        "userName",
+        "fullName",
+        "email"
+      ]
+    },
+    "MarketplaceListing": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "MarketplaceListing",
+      "type": "object",
+      "description": "Represents an item listed for sale on the marketplace.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the MarketplaceListing entity."
+        },
+        "sellerId": {
+          "type": "string",
+          "description": "Reference to UserProfile of the seller. (Relationship: UserProfile 1:N MarketplaceListing)"
+        },
+        "title": {
+          "type": "string",
+          "description": "Title of the listing."
+        },
+        "description": {
+          "type": "string",
+          "description": "Description of the item for sale."
+        },
+        "price": {
+          "type": "number",
+          "description": "Price of the item."
+        },
+        "imageUrl": {
+          "type": "string",
+          "description": "URL to the item's image.",
+          "format": "uri"
+        },
+        "category": {
+          "type": "string",
+          "description": "Category of the item."
+        },
+        "isSold": {
+          "type": "boolean",
+          "description": "Specifies whether the item is sold or not."
+        }
+      },
+      "required": [
+        "id",
+        "sellerId",
+        "title",
+        "description",
+        "price",
+        "imageUrl",
+        "category"
+      ]
+    },
+    "LostAndFoundItem": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "LostAndFoundItem",
+      "type": "object",
+      "description": "Represents a lost or found item.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the LostAndFoundItem entity."
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to UserProfile who posted the item. (Relationship: UserProfile 1:N LostAndFoundItem)"
+        },
+        "description": {
+          "type": "string",
+          "description": "Description of the lost or found item."
+        },
+        "imageUrl": {
+          "type": "string",
+          "description": "URL to the item's image.",
+          "format": "uri"
+        },
+        "location": {
+          "type": "string",
+          "description": "Location where the item was lost or found."
+        },
+        "date": {
+          "type": "string",
+          "description": "Date when the item was lost or found.",
+          "format": "date-time"
+        },
+        "type": {
+          "type": "string",
+          "description": "Type of item (lost or found)."
+        }
+      },
+      "required": [
+        "id",
+        "userId",
+        "description",
+        "imageUrl",
+        "location",
+        "date",
+        "type"
+      ]
+    },
+    "Message": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Message",
+      "type": "object",
+      "description": "Represents a message sent between users.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Message entity."
+        },
+        "senderId": {
+          "type": "string",
+          "description": "Reference to UserProfile of the sender. (Relationship: UserProfile 1:N Message)"
+        },
+        "receiverId": {
+          "type": "string",
+          "description": "Reference to UserProfile of the receiver. (Relationship: UserProfile 1:N Message)"
+        },
+        "content": {
+          "type": "string",
+          "description": "Content of the message."
+        },
+        "timestamp": {
+          "type": "string",
+          "description": "Timestamp of when the message was sent.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "senderId",
+        "receiverId",
+        "content",
+        "timestamp"
+      ]
+    },
+    "Post": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Post",
+      "type": "object",
+      "description": "Represents a post in the news feed.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Post entity."
+        },
+        "authorId": {
+          "type": "string",
+          "description": "Reference to UserProfile who created the post. (Relationship: UserProfile 1:N Post)"
+        },
+        "content": {
+          "type": "string",
+          "description": "Content of the post."
+        },
+        "timestamp": {
+          "type": "string",
+          "description": "Timestamp of when the post was created.",
+          "format": "date-time"
+        },
+        "imageUrl": {
+          "type": "string",
+          "description": "URL to the image associated with the post.",
+          "format": "uri"
+        }
+      },
+      "required": [
+        "id",
+        "authorId",
+        "content",
+        "timestamp"
+      ]
+    },
+    "ContentModerationFlag": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "ContentModerationFlag",
+      "type": "object",
+      "description": "Represents a flag raised by the AI content moderation tool.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the ContentModerationFlag entity."
+        },
+        "contentType": {
+          "type": "string",
+          "description": "The type of content that was flagged (e.g., 'post', 'message', 'listing')."
+        },
+        "contentId": {
+          "type": "string",
+          "description": "The ID of the content that was flagged (e.g., Post ID, Message ID, Listing ID)."
+        },
+        "flagReason": {
+          "type": "string",
+          "description": "The reason for flagging the content (e.g., 'hate speech', 'violence', 'inappropriate content')."
+        },
+        "timestamp": {
+          "type": "string",
+          "description": "Timestamp of when the content was flagged.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "contentType",
+        "contentId",
+        "flagReason",
+        "timestamp"
+      ]
+    },
+    "AdBanner": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "AdBanner",
+      "type": "object",
+      "description": "Represents an advertisement banner displayed within the app.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the AdBanner entity."
+        },
+        "imageUrl": {
+          "type": "string",
+          "description": "URL to the banner image.",
+          "format": "uri"
+        },
+        "targetUrl": {
+          "type": "string",
+          "description": "URL that the banner links to.",
+          "format": "uri"
+        },
+        "startDate": {
+          "type": "string",
+          "description": "Start date for displaying the banner.",
+          "format": "date-time"
+        },
+        "endDate": {
+          "type": "string",
+          "description": "End date for displaying the banner.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "imageUrl",
+        "targetUrl",
+        "startDate",
+        "endDate"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "anonymous",
+      "google.com"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "/users/{userId}",
+        "definition": {
+          "entityName": "UserProfile",
+          "schema": {
+            "$ref": "#/backend/entities/UserProfile"
+          },
+          "description": "User profiles, accessible only to the authenticated user. Path-based ownership is enforced.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/products/{productId}",
+        "definition": {
+          "entityName": "MarketplaceListing",
+          "schema": {
+            "$ref": "#/backend/entities/MarketplaceListing"
+          },
+          "description": "Marketplace listings.  The 'sellerId' field is used for ownership checks.",
+          "params": [
+            {
+              "name": "productId",
+              "description": "The unique identifier of the marketplace listing."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/lostAndFoundItems/{itemId}",
+        "definition": {
+          "entityName": "LostAndFoundItem",
+          "schema": {
+            "$ref": "#/backend/entities/LostAndFoundItem"
+          },
+          "description": "Lost and found items. The 'userId' field is used for ownership checks.",
+          "params": [
+            {
+              "name": "itemId",
+              "description": "The unique identifier of the lost and found item."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/conversations/{conversationId}",
+        "definition": {
+          "entityName": "Conversation",
+          "schema": {
+            "$ref": "#/backend/entities/Conversation"
+          },
+          "description": "A private conversation between two or more users.",
+          "params": [
+            {
+              "name": "conversationId",
+              "description": "The unique identifier for the conversation."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/posts/{postId}",
+        "definition": {
+          "entityName": "Post",
+          "schema": {
+            "$ref": "#/backend/entities/Post"
+          },
+          "description": "Posts in the news feed. The 'authorId' field indicates the author.",
+          "params": [
+            {
+              "name": "postId",
+              "description": "The unique identifier of the post."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/content_moderation_flags/{flagId}",
+        "definition": {
+          "entityName": "ContentModerationFlag",
+          "schema": {
+            "$ref": "#/backend/entities/ContentModerationFlag"
+          },
+          "description": "Content moderation flags.  Write access restricted to trusted server environment.",
+          "params": [
+            {
+              "name": "flagId",
+              "description": "The unique identifier of the content moderation flag."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/ad_banners/{bannerId}",
+        "definition": {
+          "entityName": "AdBanner",
+          "schema": {
+            "$ref": "#/backend/entities/AdBanner"
+          },
+          "description": "Ad banners. Write access restricted to trusted server environment.",
+          "params": [
+            {
+              "name": "bannerId",
+              "description": "The unique identifier of the ad banner."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "The Firestore structure is designed to ensure security, scalability, and ease of debugging, following the principles of Authorization Independence, Clarity of Intent, DBAC (Database-Based Access Control), and QAPs (Rules are not Filters). Authorization Independence is achieved through denormalization, where authorization-related data (e.g., members map) is copied into subcollections to avoid costly and insecure `get()` calls in security rules. Structural Segregation is used to maintain a homogeneous security posture within collections. Access Modeling employs standardized patterns like path-based ownership for private data and membership maps for collaborative data. Data Clarity is enhanced by explicit state modeling and predictable schemas.\n\nSpecifically:\n\n*   **User Profiles:** Stored in `/users/{userId}`. This is path-based ownership; only the authenticated user (`request.auth.uid == userId`) can access their profile data.\n*   **Marketplace Listings:** Stored in `/products/{productId}`. Each listing contains a `sellerId` to track ownership. While not strictly path-based, security rules can easily enforce that only the seller can update or delete their listings. Public listings are QAP compliant. Consider subcollections under user profiles if listings need to be scoped by user, or if stricter ownership constraints are needed.\n*   **Lost and Found Items:** Similar to Marketplace Listings, stored in `/lostAndFoundItems/{itemId}` with a `userId` field.  Security rules enforce that only the user who posted the item can modify it.\n*   **Messages:** Stored in `/messages/{messageId}`.  Each message contains `senderId` and `receiverId`.  Security rules will allow read access only to either the sender or receiver.\n*   **Posts:** Stored in `/posts/{postId}`.  Each post contains a `userId` to identify the author.  Security rules allow read access to anyone, but write access is restricted to the author.\n*   **Content Moderation Flags:** Stored in `/content_moderation_flags/{flagId}`. These are system-generated and should only be writeable by a trusted server environment. Security rules should restrict access to these documents.\n*   **Ad Banners:** Stored in `/ad_banners/{bannerId}`. These are system-managed and should only be writeable by a trusted server environment. Security rules should restrict access to these documents."
+  }
+}
+    

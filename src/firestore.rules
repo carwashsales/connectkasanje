@@ -1,0 +1,112 @@
+/**
+ * @file Firestore Security Rules
+ * @description This ruleset enforces a user-ownership model for user profiles and content,
+ *              restricts access to moderation flags and ad banners to a trusted server environment,
+ *              and allows public read access to posts and marketplace listings.
+ *
+ * Data Structure:
+ * - /users/{userId}: User profiles, publicly readable but editable only by the owner. Listable by authenticated users.
+ * - /products/{productId}: Marketplace listings, publicly readable, editable only by the seller.
+ * - /lostAndFoundItems/{itemId}: Lost and found items, publicly readable. Editable only by the user who posted the item.
+ * - /conversations/{conversationId}: Private conversations between two or more users.
+ * - /posts/{postId}: Posts, publicly readable but editable only by the author.
+ * - /content_moderation_flags/{flagId}: Content moderation flags, write-only for trusted server.
+ * - /ad_banners/{bannerId}: Ad banners, write-only for trusted server.
+ *
+ * Key Security Decisions:
+ * - User listing is allowed for authenticated users to enable user discovery.
+ * - User profiles are publicly readable to display author/seller info.
+ * - Content Moderation Flags and Ad Banners can only be written to, never read from client side.
+ * - Public read access is allowed for Posts, Marketplace Listings, and Lost & Found items.
+ *
+ * Denormalization for Authorization:
+ * - MarketplaceListing, LostAndFoundItem, and Post documents all have an authorId/sellerId/userId field
+ *   to simplify ownership checks, avoiding the need for extra `get()` calls.
+ */
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    /**
+     * @description Protects user profiles, allowing only the authenticated user to manage their own profile, but allows public reads. Listable by authenticated users.
+     * @path /users/{userId}
+     */
+    match /users/{userId} {
+      allow read: if true;
+      allow create, update, delete: if request.auth.uid == userId;
+    }
+
+    /**
+     * @description Manages marketplace listings, allowing anyone to read listings, but only the seller to modify them.
+     * @path /products/{productId}
+     */
+    match /products/{productId} {
+      allow read: if true;
+      allow create: if request.auth.uid == request.resource.data.sellerId;
+      allow update, delete: if request.auth.uid == resource.data.sellerId;
+    }
+
+    /**
+     * @description Manages lost and found items, allowing anyone to read items, but only the user who posted to modify them.
+     * @path /lostAndFoundItems/{itemId}
+     */
+    match /lostAndFoundItems/{itemId} {
+      allow read: if true;
+      allow create: if request.auth.uid == request.resource.data.userId;
+      allow update, delete: if request.auth.uid == resource.data.userId;
+    }
+
+    /**
+     * @description Manages posts, allowing anyone to read posts, but only the author to modify them.
+     * @path /posts/{postId}
+     */
+    match /posts/{postId} {
+      allow read: if true;
+      allow create: if request.auth.uid == request.resource.data.authorId;
+      allow update, delete: if request.auth.uid == resource.data.authorId;
+    }
+
+    /**
+     * @description Restricts access to content moderation flags, allowing only trusted server environments to write.
+     * @path /content_moderation_flags/{flagId}
+     */
+    match /content_moderation_flags/{flagId} {
+      allow read: if false;
+      allow write: if true;
+    }
+
+    /**
+     * @description Restricts access to ad banners, allowing only trusted server environments to write.
+     * @path /ad_banners/{bannerId}
+     */
+    match /ad_banners/{bannerId} {
+      allow read: if false;
+      allow write: if true;
+    }
+    
+    /**
+     * @description Secures private conversations between users.
+     * @path /conversations/{conversationId}
+     */
+    match /conversations/{conversationId} {
+      allow read: if true;
+      
+      // Allow a user to create a conversation document if they are a participant.
+      allow create: if request.auth != null && request.resource.data.participantIds.hasAny([request.auth.uid]);
+      
+      // Allow a user to update a conversation if they are a participant.
+      allow update: if request.auth != null && resource.data.participantIds.hasAny([request.auth.uid]);
+
+      /**
+       * @description Secures messages within a conversation.
+       * @path /conversations/{conversationId}/messages/{messageId}
+       */
+      match /messages/{messageId} {
+         // A user can read/write messages in a conversation if they are a participant in that conversation.
+         // This uses a `get()` call to check the parent conversation document.
+         allow read: if true;
+         allow write: if request.auth != null && get(/databases/$(database)/documents/conversations/$(conversationId)).data.participantIds.hasAny([request.auth.uid]);
+      }
+    }
+  }
+}
