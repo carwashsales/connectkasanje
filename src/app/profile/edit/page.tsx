@@ -8,6 +8,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { useSupabaseAuth as useUser } from '@/supabase/AuthProvider';
 import supabase from '@/supabase/client';
+import { getUserId } from '@/lib/getUserId';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { validateUploadFile } from '@/lib/supabase';

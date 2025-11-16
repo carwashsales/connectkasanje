@@ -18,6 +18,7 @@ import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from "@/comp
 import { validateUploadFile } from '@/lib/supabase';
 import { Progress } from '@/components/ui/progress';
 import { useToast } from '@/hooks/use-toast';
+import { getUserId } from '@/lib/getUserId';
 
 
 function ProfileSkeleton() {

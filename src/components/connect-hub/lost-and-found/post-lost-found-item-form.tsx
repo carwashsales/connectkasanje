@@ -118,7 +118,7 @@ export function PostLostFoundItemForm({ isOpen, onOpenChange, itemToEdit, onSave
         title: 'Database Error',
         description: `Could not ${isEdit ? 'update' : 'post'} item.`,
         variant: 'destructive',
-            const userId = getUserId(authUser);
+      });
     } finally {
       setLoading(false);
     }

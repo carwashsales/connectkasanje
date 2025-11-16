@@ -2,6 +2,7 @@
 
 import { ChatLayout } from "@/components/connect-hub/messages/chat-layout";
 import { useSupabaseAuth as useUser } from '@/supabase/AuthProvider';
+import { getUserId } from '@/lib/getUserId';
 import type { UserProfile, Conversation as ConversationType } from '@/lib/types';
 import { useEffect, useMemo, useState } from "react";
 import { Card } from "@/components/ui/card";
@@ -56,6 +57,11 @@ export default function MessagesPage() {
         try {
           setLoading(true);
           const uid = getUserId(authUser);
+          if (!uid) {
+            setRawConversations([]);
+            setCurrentUserProfile(undefined);
+            return;
+          }
           const result = await getConversations({ userId: uid });
           
           // Convert string dates back to Date objects

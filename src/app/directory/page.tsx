@@ -4,6 +4,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useSupabaseAuth as useUser } from '@/supabase/AuthProvider';
+import { getUserId } from '@/lib/getUserId';
 import supabase from '@/supabase/client';
 import type { UserProfile } from "@/lib/types";
 import { Loader2, MessageSquare, Search as SearchIcon } from "lucide-react";

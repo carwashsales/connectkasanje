@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useSupabaseAuth as useUser } from '@/supabase/AuthProvider';
 import { useToast } from '@/hooks/use-toast';
+import { getUserId } from '@/lib/getUserId';
 import { Textarea } from '@/components/ui/textarea';
 import type { UserProfile } from '@/lib/types';
 import { Loader2 } from 'lucide-react';
