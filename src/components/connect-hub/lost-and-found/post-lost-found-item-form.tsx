@@ -19,6 +19,7 @@ import { useSupabaseAuth as useUser } from '@/supabase/AuthProvider';
 import { Loader2 } from 'lucide-react';
 import { uploadToSupabase } from '@/lib/supabase';
 import supabase from '@/supabase/client';
+import { getUserId } from '@/lib/getUserId';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import type { LostFoundItem } from '@/lib/types';
 
@@ -117,7 +118,7 @@ export function PostLostFoundItemForm({ isOpen, onOpenChange, itemToEdit, onSave
         title: 'Database Error',
         description: `Could not ${isEdit ? 'update' : 'post'} item.`,
         variant: 'destructive',
-      });
+            const userId = getUserId(authUser);
     } finally {
       setLoading(false);
     }

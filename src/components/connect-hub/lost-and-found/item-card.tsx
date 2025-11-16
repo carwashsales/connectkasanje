@@ -7,6 +7,7 @@ import { MapPin, Calendar, Phone, MoreHorizontal, Pencil, Trash2 } from "lucide-
 import Image from "next/image";
 import { formatDistanceToNow } from 'date-fns';
 import { useSupabaseAuth as useUser } from '@/supabase/AuthProvider';
+import { getUserId } from '@/lib/getUserId';
 import { useMemo, useState } from "react";
 import {
   DropdownMenu,
@@ -42,7 +43,7 @@ export function ItemCard({ item }: ItemCardProps) {
   const [isEditFormOpen, setIsEditFormOpen] = useState(false);
   
   const isOwner = useMemo(() => {
-    const uid = (authUser as any)?.id ?? (authUser as any)?.uid;
+  const uid = getUserId(authUser);
     return !!uid && uid === item.userId;
   }, [authUser, item.userId]);
   const createdDate = (item.createdAt && typeof item.createdAt === 'string') ? new Date(item.createdAt) : (item.createdAt && (item.createdAt as any).toDate ? (item.createdAt as any).toDate() : (item.createdAt as unknown as Date | undefined));

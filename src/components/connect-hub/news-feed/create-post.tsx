@@ -7,6 +7,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { useSupabaseAuth as useUser } from '@/supabase/AuthProvider';
 import supabase from '@/supabase/client';
+import { getUserId } from '@/lib/getUserId';
 import type { UserProfile as User } from '@/lib/types';
 import { Paperclip, Send, Loader2 } from 'lucide-react';
 import { uploadToSupabase } from '@/lib/supabase';
@@ -89,7 +90,7 @@ export function CreatePost({ user }: CreatePostProps) {
     }
 
     try {
-      const userId = (authUser as any)?.id ?? (authUser as any)?.uid;
+      const userId = getUserId(authUser);
       const { error } = await supabase.from('posts').insert([{ 
         user_id: userId,
         body: content,

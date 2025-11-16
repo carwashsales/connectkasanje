@@ -90,7 +90,7 @@ export default function ProfileEditPage() {
       }
 
       // upsert into Supabase profiles table
-      const userId = (authUser as any)?.id ?? (authUser as any)?.uid;
+  const userId = getUserId(authUser);
       const { error } = await supabase.from('profiles').upsert({
         id: userId,
         full_name: updates.name,

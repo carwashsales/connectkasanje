@@ -206,7 +206,7 @@ export default function ProfilePage() {
                                                                                         const path = res.path;
                                                                                                                                                                                 // Upsert profile avatar in Supabase
                                                                                                                                                                                 try {
-                                                                                                                                                                                    const userId = (authUser as any)?.id ?? (authUser as any)?.uid;
+                                                                                                                                                                                    const userId = getUserId(authUser);
                                                                                                                                                                                     if (userId) {
                                                                                                                                                                                         const { error: upsertError } = await supabase.from('profiles').upsert({ id: userId, avatar_url: signedUrl });
                                                                                                                                                                                         if (upsertError) console.error('Profile upsert error', upsertError);

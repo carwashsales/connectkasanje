@@ -55,7 +55,7 @@ export default function MessagesPage() {
       const fetchConversations = async () => {
         try {
           setLoading(true);
-          const uid = (authUser as any)?.id ?? (authUser as any)?.uid;
+          const uid = getUserId(authUser);
           const result = await getConversations({ userId: uid });
           
           // Convert string dates back to Date objects

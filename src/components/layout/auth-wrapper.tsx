@@ -1,6 +1,7 @@
 'use client';
 
 import { useSupabaseAuth as useUser } from '@/supabase/AuthProvider';
+import { getUserId } from '@/lib/getUserId';
 import { usePathname, useRouter } from 'next/navigation';
 import React, { useEffect, useMemo } from 'react';
 import { AppLayout } from './app-layout';
@@ -71,7 +72,7 @@ export function AuthWrapper({ children }: { children: React.ReactNode }) {
     let mounted = true;
     async function loadProfile() {
       setUserProfileLoading(true);
-      const uid = (authUser as any)?.id ?? (authUser as any)?.uid;
+  const uid = getUserId(authUser);
       if (!uid) {
         setUserProfile(null);
         setUserProfileLoading(false);

@@ -4,6 +4,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useSupabaseAuth as useUser } from '@/supabase/AuthProvider';
+import { getUserId } from '@/lib/getUserId';
 import supabase from '@/supabase/client';
 import type { Product } from "@/lib/types";
 import Image from "next/image";
@@ -48,7 +49,7 @@ export function ItemCard({ item }: ItemCardProps) {
   const [isEditFormOpen, setIsEditFormOpen] = useState(false);
 
   const isSeller = useMemo(() => {
-    const uid = (authUser as any)?.id ?? (authUser as any)?.uid;
+  const uid = getUserId(authUser);
     return !!uid && uid === item.sellerId;
   }, [authUser, item.sellerId]);
   

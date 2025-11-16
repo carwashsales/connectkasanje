@@ -19,6 +19,7 @@ import { useSupabaseAuth as useUser } from '@/supabase/AuthProvider';
 import { Loader2 } from 'lucide-react';
 import { uploadToSupabase } from '@/lib/supabase';
 import supabase from '@/supabase/client';
+import { getUserId } from '@/lib/getUserId';
 import { z } from 'zod';
 import type { Product } from '@/lib/types';
 
@@ -103,7 +104,7 @@ export function SellItemForm({ isOpen, onOpenChange, itemToEdit }: SellItemFormP
           }
         }
 
-        const userId = (authUser as any)?.id ?? (authUser as any)?.uid;
+        const userId = getUserId(authUser);
         const { error } = await supabase.from('posts').insert([{ 
           user_id: userId,
           title: name,

@@ -47,7 +47,7 @@ export default function SettingsPage() {
         let mounted = true;
         async function loadProfile() {
             setUserLoading(true);
-            const uid = (authUser as any)?.id ?? (authUser as any)?.uid;
+            const uid = getUserId(authUser);
             if (!uid) {
                 setUser(null);
                 setUserLoading(false);

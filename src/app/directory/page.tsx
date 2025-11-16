@@ -109,7 +109,7 @@ export default function DirectoryPage() {
     }, [allUsers, searchTerm]);
     
     const handleSendMessage = async (targetUser: UserProfile) => {
-        const uid = (authUser as any)?.id ?? (authUser as any)?.uid;
+    const uid = getUserId(authUser);
         if (!authUser || !uid || uid === targetUser.uid) return;
 
         setIsCreatingConversation(true);

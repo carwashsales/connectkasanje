@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Search, Send, ArrowLeft, MessageCircle, Paperclip } from "lucide-react";
 import { uploadToSupabase } from '@/lib/supabase';
+import { getUserId } from '@/lib/getUserId';
 import type { Conversation, Message, UserProfile } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { useSupabaseAuth as useUser } from '@/supabase/AuthProvider';
@@ -201,11 +202,13 @@ export function ChatLayout({ conversations, currentUser, defaultConversationId }
     }
 
     try {
-      const senderId = (currentUser as any).uid || (currentUser as any).id;
+      const senderId = getUserId(currentUser);
+      const recipient = Object.values(selectedConversation.participants).find((p:any) => (p.uid || p.id) !== senderId);
+      const recipientId = getUserId(recipient);
       const { error: insertError } = await supabase.from('messages').insert([{
         conversation_id: selectedConversation.id,
         sender_id: senderId,
-        recipient_id: Object.values(selectedConversation.participants).find((p:any) => p.uid !== senderId)?.uid,
+        recipient_id: recipientId,
         text: messageText,
         file: fileMeta || null
       }]);

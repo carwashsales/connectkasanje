@@ -8,6 +8,7 @@ import { Heart, MessageCircle, Share2, MoreHorizontal } from "lucide-react";
 import Image from "next/image";
 import supabase from '@/supabase/client';
 import { useSupabaseAuth as useUser } from '@/supabase/AuthProvider';
+import { getUserId } from '@/lib/getUserId';
 import { formatDistanceToNow } from 'date-fns';
 import Link from "next/link";
 import {
@@ -125,7 +126,7 @@ export function PostCard({ post }: PostCardProps) {
 
   const [localLikes, setLocalLikes] = useState<number>(post.likes ?? 0);
   const [localLikedBy, setLocalLikedBy] = useState<string[]>(post.likedBy ?? []);
-  const uid = (authUser as any)?.id ?? (authUser as any)?.uid;
+  const uid = getUserId(authUser);
   const hasLiked = uid ? localLikedBy.includes(uid) : false;
 
   const handleLike = async () => {
