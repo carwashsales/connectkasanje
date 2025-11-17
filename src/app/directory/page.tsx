@@ -13,7 +13,11 @@ import Link from "next/link";
 import { SearchBar } from "@/components/connect-hub/shared/search-bar";
 import { useRouter } from "next/navigation";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { getUsers } from "@/ai/flows/get-users";
+// Use the server API route to fetch users from the service role instead of
+// calling the server action `getUsers()` from the client. Calling server
+// actions from the client triggers a POST to the current route and can
+// surface server errors (500) in production if server env vars aren't set.
+// We fetch `/api/get-users` directly which is safer and more explicit.
 
 
 function UserCardSkeleton() {
@@ -90,8 +94,11 @@ export default function DirectoryPage() {
         const fetchUsers = async () => {
             try {
                 setLoading(true);
-                const users = await getUsers();
-                setAllUsers(users);
+                                // Call our API route which uses the service role key
+                                const res = await fetch('/api/get-users');
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                const json = await res.json();
+                setAllUsers(json.users || []);
             } catch (error) {
                 console.error("Failed to fetch users:", error);
             } finally {

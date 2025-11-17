@@ -12,8 +12,24 @@ if (!SUPABASE_URL || !SERVICE_ROLE_KEY) {
 const supabaseAdmin = createClient(SUPABASE_URL || '', SERVICE_ROLE_KEY || '');
 
 export async function POST(req: Request) {
+  async function parseJsonBody(r: Request) {
+    try {
+      if (typeof (r as any).json === 'function') {
+        return await (r as any).json();
+      }
+      if ((r as any).body && typeof (r as any).body.json === 'function') {
+        return await (r as any).body.json();
+      }
+      const txt = await r.text();
+      return txt ? JSON.parse(txt) : {};
+    } catch (e) {
+      console.error('create-profile: body parse error', e);
+      throw new Error('Invalid JSON body');
+    }
+  }
+
   try {
-    const body = await req.json();
+    const body = await parseJsonBody(req);
     const { user_id, email, full_name } = body;
     if (!user_id) return NextResponse.json({ error: 'user_id is required' }, { status: 400 });
 
