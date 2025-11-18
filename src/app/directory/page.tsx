@@ -122,23 +122,27 @@ export default function DirectoryPage() {
 
         setIsCreatingConversation(true);
         try {
-            // Look for an existing conversation by checking messages between the two users
-            const { data: existingMessages, error: msgError } = await supabase
-                .from('messages')
-                .select('conversation_id')
-                .or(`and(sender_id.eq.${uid},recipient_id.eq.${targetUser.uid}),and(sender_id.eq.${targetUser.uid},recipient_id.eq.${uid})`)
-                .order('created_at', { ascending: false })
-                .limit(1);
+            // Ask our server to lookup-or-create a conversation. This avoids client-side
+            // RLS failures and centralizes the logic on the trusted backend.
+            const session = await supabase.auth.getSession();
+            const token = session?.data?.session?.access_token;
+            const headers: any = { 'Content-Type': 'application/json' };
+            if (token) headers['Authorization'] = `Bearer ${token}`;
 
-            if (msgError) throw msgError;
+            const res = await fetch('/api/create-conversation', {
+                method: 'POST',
+                headers,
+                body: JSON.stringify({ user_id: uid, target_user_id: targetUser.uid })
+            });
 
-            if (existingMessages && existingMessages.length > 0 && existingMessages[0].conversation_id) {
-                router.push(`/messages?conversationId=${existingMessages[0].conversation_id}`);
-            } else {
-                const { data: convData, error: convError } = await supabase.from('conversations').insert([{ last_message_text: '', last_message_at: new Date().toISOString() }]).select().single();
-                if (convError) throw convError;
-                router.push(`/messages?conversationId=${convData.id}`);
+            if (!res.ok) {
+                const err = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
+                throw new Error(err.error || `HTTP ${res.status}`);
             }
+            const json = await res.json();
+            const conversationId = json?.conversationId;
+            if (!conversationId) throw new Error('No conversation id returned');
+            router.push(`/messages?conversationId=${conversationId}`);
         } catch (err) {
             console.error('Failed to start conversation', err);
         } finally {

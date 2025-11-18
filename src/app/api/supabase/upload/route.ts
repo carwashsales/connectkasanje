@@ -60,13 +60,18 @@ export const POST = async (req: Request) => {
       return NextResponse.json({ error: uploadError.message }, { status: 500 });
     }
 
-    // Generate a signed URL for download (expires in 1 hour)
+    // Prefer a public URL when the bucket is public; otherwise generate a signed URL.
+    const { data: publicData } = supabaseServer.storage.from(bucket).getPublicUrl(path);
+    if (publicData?.publicUrl) {
+      return NextResponse.json({ path, publicUrl: publicData.publicUrl });
+    }
+
     const { data: signedData, error: signedError } = await supabaseServer.storage.from(bucket).createSignedUrl(path, 3600);
     if (signedError) {
       return NextResponse.json({ error: signedError.message }, { status: 500 });
     }
 
-    return NextResponse.json({ path, url: signedData.signedUrl });
+    return NextResponse.json({ path, publicUrl: signedData.signedUrl });
   } catch (err:any) {
     return NextResponse.json({ error: err?.message || String(err) }, { status: 500 });
   }

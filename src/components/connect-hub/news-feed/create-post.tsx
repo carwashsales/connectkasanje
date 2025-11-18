@@ -31,6 +31,7 @@ export function CreatePost({ user }: CreatePostProps) {
   const [loading, setLoading] = useState(false);
   const [attachedFile, setAttachedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
 
   if (!authUser || !user) {
     return null;
@@ -59,11 +60,13 @@ export function CreatePost({ user }: CreatePostProps) {
     try {
       if (attachedFile) {
         try {
-          const uploaded = await uploadToSupabase(attachedFile);
+          setUploadProgress(0);
+          const uploaded = await uploadToSupabase(attachedFile, undefined, undefined, (pct) => setUploadProgress(pct));
           media = { url: uploaded.publicUrl, path: uploaded.path, mime: attachedFile.type };
+          setUploadProgress(null);
         } catch (err) {
           console.error('Upload failed', err);
-          toast({ title: 'Upload Error', description: 'Could not upload attachment.', variant: 'destructive' });
+          toast({ title: 'Upload Error', description: (err as any)?.message || 'Could not upload attachment.', variant: 'destructive' });
           setLoading(false);
           return;
         }
@@ -119,6 +122,7 @@ export function CreatePost({ user }: CreatePostProps) {
       }
       toast({ title: 'Success', description: 'Post created successfully.' });
       formRef.current?.reset();
+      setUploadProgress(null);
     } catch (error: any) {
       console.error('Error writing post:', error);
       toast({ title: 'Database Error', description: error?.message || 'Could not save post to the database.', variant: 'destructive' });
@@ -173,6 +177,14 @@ export function CreatePost({ user }: CreatePostProps) {
                   )}
                 </div>
               )}
+            {uploadProgress !== null && (
+              <div className="ml-4 w-48">
+                <div className="h-2 bg-muted rounded overflow-hidden">
+                  <div className="h-2 bg-primary" style={{ width: `${uploadProgress}%` }} />
+                </div>
+                <p className="text-xs mt-1">Uploading: {uploadProgress}%</p>
+              </div>
+            )}
             <Button type="submit" disabled={loading} className="bg-accent text-accent-foreground hover:bg-accent/90">
                 {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 {loading ? 'Posting...' : 'Post'}

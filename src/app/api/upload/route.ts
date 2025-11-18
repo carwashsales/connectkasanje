@@ -31,9 +31,20 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: error.message || error }, { status: 500 });
     }
 
+    // Try to get a public URL first. If the bucket is private this may return
+    // a URL that is not publicly accessible, so fall back to a signed URL.
     const { data: urlData } = supabaseServer.storage.from(bucket).getPublicUrl(data.path);
+    let publicUrl = urlData?.publicUrl || null;
+    if (!publicUrl) {
+      const { data: signed, error: signedErr } = await supabaseServer.storage.from(bucket).createSignedUrl(data.path, 3600);
+      if (signedErr) {
+        console.error('upload route: failed to create signed url', signedErr);
+      } else {
+        publicUrl = signed.signedUrl;
+      }
+    }
 
-    return NextResponse.json({ publicUrl: urlData.publicUrl, path: data.path });
+    return NextResponse.json({ publicUrl, path: data.path });
   } catch (err: any) {
     console.error('upload route exception', err);
     return NextResponse.json({ error: err?.message ?? String(err) }, { status: 500 });

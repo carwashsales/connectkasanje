@@ -1,7 +1,8 @@
 import supabase from '@/supabase/client';
 import supabaseServer from '@/supabase/server-client';
 
-export const DEFAULT_BUCKET = 'ft';
+// Default bucket can be configured via env var so deployments can pick a bucket name.
+export const DEFAULT_BUCKET = process.env.NEXT_PUBLIC_SUPABASE_BUCKET || process.env.SUPABASE_BUCKET || 'hub';
 
 export async function uploadClientFile(path: string, file: File) {
   // uploads using the client anon key (suitable for public buckets)
