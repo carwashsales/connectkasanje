@@ -22,9 +22,10 @@ const CreatePostSchema = z.object({
 
 type CreatePostProps = {
   user: User;
+  onPosted?: (post: any) => void;
 };
 
-export function CreatePost({ user }: CreatePostProps) {
+export function CreatePost({ user, onPosted }: CreatePostProps) {
   const { user: authUser } = useUser();
   const formRef = useRef<HTMLFormElement>(null);
   const { toast } = useToast();
@@ -60,6 +61,27 @@ export function CreatePost({ user }: CreatePostProps) {
     }
 
     let media: any = null;
+    const userId = getUserId(authUser);
+    // Create optimistic post so the UI shows immediate feedback.
+    const tempId = `temp-${Date.now()}`;
+    const optimisticPost = {
+      id: tempId,
+      authorId: userId,
+      content,
+      image: previewUrl ? { url: previewUrl, hint: 'preview' } : undefined,
+      createdAt: { toDate: () => new Date() } as any,
+      likes: 0,
+      likedBy: [],
+      comments: 0,
+      optimistic: true,
+    } as any;
+    try {
+      if (typeof onPosted === 'function') {
+        onPosted(optimisticPost);
+      } else {
+        try { window?.dispatchEvent(new CustomEvent('connethub:post-created', { detail: optimisticPost })); } catch (e) { /* ignore */ }
+      }
+    } catch (e) { /* ignore */ }
     try {
       if (attachedFile) {
         try {
@@ -78,6 +100,8 @@ export function CreatePost({ user }: CreatePostProps) {
           const msg = (err as any)?.message || 'Could not upload attachment.';
           setUploadError(msg);
           toast({ title: 'Upload Error', description: msg, variant: 'destructive' });
+          // notify parent to remove optimistic post
+          try { window?.dispatchEvent(new CustomEvent('connethub:post-failed', { detail: { tempId, reason: msg } })); } catch (e) { /* ignore */ }
           setLoading(false);
           setIsUploading(false);
           uploadCancelRef.current = null;
@@ -133,9 +157,29 @@ export function CreatePost({ user }: CreatePostProps) {
         const err = await res.json().catch(() => ({ error: 'unknown' }));
         throw new Error(err.error || `HTTP ${res.status}`);
       }
+      const payload = await res.json().catch(() => ({}));
+      const created = Array.isArray(payload.data) ? payload.data[0] : payload.data;
+      // Map created row to client Post shape and notify parent
+      const newPost = {
+        id: created?.id,
+        authorId: created?.user_id,
+        content: created?.body ?? created?.title ?? content,
+        image: created?.media ? { url: created.media.url, hint: created.media.path } : media ? { url: media.url, hint: media.path } : undefined,
+        createdAt: { toDate: () => new Date(created?.created_at || new Date().toISOString()) },
+        likes: created?.metadata?.likes ?? 0,
+        likedBy: created?.metadata?.likedBy ?? [],
+        comments: created?.metadata?.comments ?? 0,
+      };
       toast({ title: 'Success', description: 'Post created successfully.' });
       formRef.current?.reset();
       setUploadProgress(null);
+      if (typeof onPosted === 'function') {
+        try { onPosted(newPost); } catch (e) { /* ignore */ }
+      } else {
+        try { window?.dispatchEvent(new CustomEvent('connethub:post-created', { detail: newPost })); } catch (e) { /* ignore */ }
+      }
+      // remove any optimistic posts that match the tempId/content
+      try { window?.dispatchEvent(new CustomEvent('connethub:post-replaced', { detail: { tempId, finalId: newPost.id } })); } catch (e) { /* ignore */ }
     } catch (error: any) {
       console.error('Error writing post:', error);
       toast({ title: 'Database Error', description: error?.message || 'Could not save post to the database.', variant: 'destructive' });

@@ -126,9 +126,47 @@ export function NewsFeed() {
     });
   });
 
+  useEffect(() => {
+    // global fallback: listen for created posts dispatched by CreatePost
+    const createdHandler = (e: any) => {
+      const detail = e?.detail;
+      if (!detail) return;
+      setPosts((prev) => {
+        const cur = prev || [];
+        return [detail, ...cur];
+      });
+    };
+
+    const failedHandler = (e: any) => {
+      const detail = e?.detail;
+      if (!detail?.tempId) return;
+      setPosts((prev) => (prev || []).filter((p) => p.id !== detail.tempId));
+    };
+
+    const replacedHandler = (e: any) => {
+      const { tempId, finalId } = e?.detail ?? {};
+      if (!tempId || !finalId) return;
+      setPosts((prev) => {
+        const prevList = prev || [];
+        // remove temp posts matching tempId
+        const filtered = prevList.filter((p) => p.id !== tempId);
+        return filtered;
+      });
+    };
+
+    window?.addEventListener && window.addEventListener('connethub:post-created', createdHandler);
+    window?.addEventListener && window.addEventListener('connethub:post-failed', failedHandler);
+    window?.addEventListener && window.addEventListener('connethub:post-replaced', replacedHandler);
+    return () => {
+      window?.removeEventListener && window.removeEventListener('connethub:post-created', createdHandler);
+      window?.removeEventListener && window.removeEventListener('connethub:post-failed', failedHandler);
+      window?.removeEventListener && window.removeEventListener('connethub:post-replaced', replacedHandler);
+    };
+  }, []);
+
   return (
     <div className="space-y-8">
-      {currentUser && <CreatePost user={currentUser} />}
+      {currentUser && <CreatePost user={currentUser} onPosted={(p) => setPosts((prev) => [p, ...(prev || [])])} />}
       <div className="space-y-6">
         {loadingPosts ? (
            Array.from({ length: 3 }).map((_, i) => <PostSkeleton key={i} />)

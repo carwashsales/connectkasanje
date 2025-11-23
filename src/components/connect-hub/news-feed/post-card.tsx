@@ -117,6 +117,9 @@ export function PostCard({ post }: PostCardProps) {
 
   const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isCommentDialogOpen, setIsCommentDialogOpen] = useState(false);
+  const [commentText, setCommentText] = useState('');
+  const [commenting, setCommenting] = useState(false);
   const { toast } = useToast();
 
   const isAuthor = useMemo(() => authUser && ((authUser as any).id ?? (authUser as any).uid) === post.authorId, [authUser, post.authorId]);
@@ -222,6 +225,10 @@ export function PostCard({ post }: PostCardProps) {
                 <MessageCircle className="h-4 w-4" />
                 <span>{post.comments}</span>
             </Button>
+            <Button variant="ghost" size="sm" onClick={() => setIsCommentDialogOpen(true)} className="flex items-center gap-2 text-muted-foreground hover:text-primary">
+              <MessageCircle className="h-4 w-4" />
+              <span>Comment</span>
+            </Button>
         </div>
         <Button variant="ghost" size="sm" className="flex items-center gap-2 text-muted-foreground hover:text-primary">
             <Share2 className="h-4 w-4" />
@@ -246,6 +253,41 @@ export function PostCard({ post }: PostCardProps) {
     </AlertDialog>
     
     {isAuthor && <EditPostDialog post={post} isOpen={isEditDialogOpen} onOpenChange={setIsEditDialogOpen} />}
+    <Dialog open={isCommentDialogOpen} onOpenChange={setIsCommentDialogOpen}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Write a comment</DialogTitle>
+        </DialogHeader>
+        <Textarea value={commentText} onChange={(e) => setCommentText(e.target.value)} className="min-h-[80px]" />
+        <DialogFooter>
+          <DialogClose asChild>
+            <Button variant="ghost">Cancel</Button>
+          </DialogClose>
+          <Button onClick={async () => {
+            if (!commentText.trim()) return;
+            if (!authUser) { toast({ title: 'Error', description: 'You must be logged in to comment.', variant: 'destructive' }); return; }
+            setCommenting(true);
+            try {
+              const session = await (supabase as any).auth.getSession();
+              const token = session?.data?.session?.access_token;
+              const userId = getUserId(authUser);
+              const res = await fetch('/api/create-comment', { method: 'POST', headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) }, body: JSON.stringify({ post_id: post.id, user_id: userId, body: commentText }) });
+              if (!res.ok) { const err = await res.json().catch(() => ({})); throw new Error(err.error || `HTTP ${res.status}`); }
+              toast({ title: 'Success', description: 'Comment posted.' });
+              // optimistic increment
+              (post as any).comments = ((post as any).comments || 0) + 1;
+              setCommentText('');
+              setIsCommentDialogOpen(false);
+            } catch (err) {
+              console.error('Failed to post comment', err);
+              toast({ title: 'Error', description: (err as any)?.message || 'Could not post comment.', variant: 'destructive' });
+            } finally {
+              setCommenting(false);
+            }
+          }} disabled={commenting}>{commenting ? 'Posting...' : 'Post Comment'}</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
     </>
   );
 }
