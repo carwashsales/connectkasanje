@@ -325,7 +325,7 @@ export function ChatLayout({ conversations, currentUser, defaultConversationId }
               <form onSubmit={handleSendMessage} className="flex items-center gap-2">
                 <input id="message-file" type="file" className="hidden" accept="image/*,video/*" onChange={(e) => setAttachedFile(e.target.files?.[0] ?? null)} />
                 <label htmlFor="message-file">
-                  <Button variant="ghost" size="icon" className="text-muted-foreground">
+                  <Button type="button" variant="ghost" size="icon" className="text-muted-foreground">
                     <Paperclip className="h-4 w-4" />
                   </Button>
                 </label>

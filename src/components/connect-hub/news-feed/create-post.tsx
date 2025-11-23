@@ -14,7 +14,7 @@ import { uploadToSupabase, uploadCancelable } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
 // Firestore imports removed; this component uses Supabase now.
 import { z } from 'zod';
-import { moderateContent } from '@/ai/flows/automated-content-moderation';
+// moderation is server-side; call via API to avoid importing server modules into a client component
 
 const CreatePostSchema = z.object({
   content: z.string().min(1, 'Post content cannot be empty.').max(500, 'Post content is too long.'),
@@ -110,13 +110,18 @@ export function CreatePost({ user, onPosted }: CreatePostProps) {
       }
       let moderationResult = { isAppropriate: true, reason: 'not-run' } as any;
       try {
-        // Try to run automated moderation. If the moderation service/action
-        // fails (for example in deployments without Genkit configured), don't
-        // block posting — instead mark the post for later moderation.
-        moderationResult = await moderateContent({ text: content });
+        // Call server moderation endpoint. If that fails, allow the post and
+        // mark it for later moderation.
+        const mres = await fetch('/api/moderate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: content }) });
+        if (mres.ok) {
+          const mp = await mres.json().catch(() => ({}));
+          moderationResult = mp?.data ?? { isAppropriate: true, reason: 'not-run' };
+        } else {
+          console.error('Moderation API returned non-OK', await mres.text());
+          moderationResult = { isAppropriate: true, reason: 'moderation-service-unavailable' };
+        }
       } catch (modErr) {
-        console.error('Moderation failed, allowing post and flagging for review', modErr);
-        // keep isAppropriate true so posting proceeds, but note the reason
+        console.error('Moderation call failed, allowing post and flagging for review', modErr);
         moderationResult = { isAppropriate: true, reason: 'moderation-service-unavailable' };
       }
       if (!moderationResult.isAppropriate) {
@@ -219,7 +224,7 @@ export function CreatePost({ user, onPosted }: CreatePostProps) {
                 }}
               />
               <label htmlFor="post-attachment">
-                <Button variant="ghost" size="icon" className="text-muted-foreground">
+                <Button type="button" variant="ghost" size="icon" className="text-muted-foreground">
                   <Paperclip className="h-5 w-5" />
                   <span className="sr-only">Attach file</span>
                 </Button>
