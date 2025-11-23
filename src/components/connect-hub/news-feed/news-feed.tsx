@@ -102,8 +102,8 @@ export function NewsFeed() {
     const record = payload.record;
     if (!record) return;
     setPosts((prev) => {
-      if (!prev) return prev;
-      if (ev === 'INSERT' || ev === 'INSERT') {
+      const current = prev || [];
+      if (ev === 'INSERT') {
         const p: Post = {
           id: record.id,
           authorId: record.user_id,
@@ -114,15 +114,15 @@ export function NewsFeed() {
           likedBy: record.metadata?.likedBy ?? [],
           comments: record.metadata?.comments ?? 0,
         };
-        return [p, ...prev];
+        return [p, ...current];
       }
       if (ev === 'UPDATE') {
-        return prev.map((x) => x.id === record.id ? { ...x, content: record.body ?? record.title ?? '', likes: record.metadata?.likes ?? x.likes } : x);
+        return current.map((x) => x.id === record.id ? { ...x, content: record.body ?? record.title ?? '', likes: record.metadata?.likes ?? x.likes } : x);
       }
       if (ev === 'DELETE') {
-        return prev.filter((x) => x.id !== record.id);
+        return current.filter((x) => x.id !== record.id);
       }
-      return prev;
+      return current;
     });
   });
 

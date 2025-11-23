@@ -6,7 +6,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Search, Send, ArrowLeft, MessageCircle, Paperclip } from "lucide-react";
-import { uploadToSupabase } from '@/lib/supabase';
+import { uploadToSupabase, uploadCancelable } from '@/lib/supabase';
+import { useToast } from '@/hooks/use-toast';
 import { getUserId } from '@/lib/getUserId';
 import type { Conversation, Message, UserProfile } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -133,6 +134,11 @@ export function ChatLayout({ conversations, currentUser, defaultConversationId }
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
   const [newMessage, setNewMessage] = useState("");
   const [attachedFile, setAttachedFile] = useState<File | null>(null);
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const uploadCancelRef = useRef<(() => void) | null>(null);
+  const { toast } = useToast();
   const [messagesRefreshKey, setMessagesRefreshKey] = useState(0);
   const [presenceMap, setPresenceMap] = useState<Record<string, any>>({});
 
@@ -194,10 +200,25 @@ export function ChatLayout({ conversations, currentUser, defaultConversationId }
     let fileMeta: any = null;
     if (attachedFile) {
       try {
-        const uploaded = await uploadToSupabase(attachedFile);
+        setUploadProgress(0);
+        setUploadError(null);
+        setIsUploading(true);
+        const controller = uploadCancelable(attachedFile, undefined, undefined, (pct) => setUploadProgress(pct));
+        uploadCancelRef.current = controller.cancel;
+        const uploaded = await controller.promise;
         fileMeta = { url: uploaded.publicUrl, path: uploaded.path, mime: attachedFile.type };
+        setUploadProgress(null);
+        setIsUploading(false);
+        uploadCancelRef.current = null;
       } catch (err) {
         console.error('Attachment upload failed', err);
+        const msg = (err as any)?.message || 'Attachment upload failed.';
+        setUploadError(msg);
+        toast({ title: 'Upload Error', description: msg, variant: 'destructive' });
+        setUploadProgress(null);
+        setIsUploading(false);
+        uploadCancelRef.current = null;
+        return;
       }
     }
 
@@ -221,6 +242,7 @@ export function ChatLayout({ conversations, currentUser, defaultConversationId }
       setMessagesRefreshKey(k => k + 1);
     } catch (err) {
       console.error('Error sending message', err);
+      toast({ title: 'Send Error', description: 'Could not send message.', variant: 'destructive' });
     }
   }
   
@@ -307,6 +329,26 @@ export function ChatLayout({ conversations, currentUser, defaultConversationId }
                     <Paperclip className="h-4 w-4" />
                   </Button>
                 </label>
+                {uploadProgress !== null && (
+                  <div className="ml-2 w-28">
+                    <div className="h-2 bg-muted rounded overflow-hidden">
+                      <div className="h-2 bg-primary" style={{ width: `${uploadProgress}%` }} />
+                    </div>
+                    <p className="text-xs mt-1">Uploading: {uploadProgress}%</p>
+                    <div className="mt-2 flex gap-2">
+                      {isUploading && (
+                        <Button variant="ghost" size="sm" onClick={() => { uploadCancelRef.current?.(); setIsUploading(false); setUploadProgress(null); setUploadError('Upload cancelled'); }}>
+                          Cancel
+                        </Button>
+                      )}
+                      {uploadError && (
+                        <Button variant="ghost" size="sm" onClick={() => { setUploadError(null); setUploadProgress(null); }}>
+                          Retry
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                )}
                 <Input 
                   placeholder="Type a message..." 
                   className="flex-1"

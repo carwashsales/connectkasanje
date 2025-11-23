@@ -81,7 +81,7 @@ export default function ProfileEditPage() {
           };
           const fd = new FormData();
           fd.append('file', file);
-          fd.append('bucket', 'ft');
+          // Let server use the configured default bucket (e.g. 'hub')
           fd.append('folder', 'avatars');
           xhr.send(fd);
         });

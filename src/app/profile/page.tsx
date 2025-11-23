@@ -193,7 +193,8 @@ export default function ProfilePage() {
                                                                             // Upload to server endpoint to store in bucket and return signed URL
                                                                             const form = new FormData();
                                                                             form.append('file', f);
-                                                                            form.append('bucket', 'ft');
+                                                                            // let server use the configured default bucket (e.g. 'hub')
+                                                                            // form.append('bucket', process.env.NEXT_PUBLIC_SUPABASE_BUCKET || 'hub');
                                                                             form.append('folder', 'avatars');
 
                                                                             // Use XMLHttpRequest to track progress

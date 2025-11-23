@@ -1,5 +1,7 @@
 import supabase from '@/supabase/client';
-import supabaseServer from '@/supabase/server-client';
+// NOTE: don't import `supabaseServer` at module load time because this file is
+// used from client bundles. Import the server client dynamically inside
+// server-only functions to avoid bundling the service-role key into client JS.
 
 // Default bucket can be configured via env var so deployments can pick a bucket name.
 export const DEFAULT_BUCKET = process.env.NEXT_PUBLIC_SUPABASE_BUCKET || process.env.SUPABASE_BUCKET || 'hub';
@@ -19,6 +21,7 @@ export async function getPublicUrl(path: string) {
 }
 
 export async function uploadServer(bytes: Uint8Array, path: string, bucket = DEFAULT_BUCKET, contentType?: string) {
+  const { default: supabaseServer } = await import('@/supabase/server-client');
   const { error } = await supabaseServer.storage.from(bucket).upload(path, bytes, {
     contentType: contentType || undefined,
     upsert: false,
@@ -27,6 +30,7 @@ export async function uploadServer(bytes: Uint8Array, path: string, bucket = DEF
 }
 
 export async function createServerSignedUrl(path: string, expiresInSec = 3600, bucket = DEFAULT_BUCKET) {
+  const { default: supabaseServer } = await import('@/supabase/server-client');
   const { data, error } = await supabaseServer.storage.from(bucket).createSignedUrl(path, expiresInSec);
   return { data, error };
 }

@@ -13,12 +13,12 @@ export const POST = async (req: Request) => {
     // Use Web API to parse FormData from request (supported in Next server runtime)
     const formData = await req.formData();
   const file = formData.get('file') as File | null;
-  // default to the project bucket 'ft' unless another allowed bucket is provided
-  const bucket = (formData.get('bucket') as string) || 'ft';
+  // default to the configured bucket name (env) or 'hub'
+  const bucket = (formData.get('bucket') as string) || process.env.NEXT_PUBLIC_SUPABASE_BUCKET || process.env.SUPABASE_BUCKET || 'hub';
     const folder = (formData.get('folder') as string) || 'uploads';
 
     // Server-side allowlist validation to prevent misuse
-  const allowedBuckets = ['ft', 'private', 'public'];
+  const allowedBuckets = [(process.env.NEXT_PUBLIC_SUPABASE_BUCKET || process.env.SUPABASE_BUCKET || 'hub'), 'private', 'public'];
     const allowedFolders = ['avatars', 'uploads', 'messages', 'products', 'profile'];
 
     if (!allowedBuckets.includes(bucket)) {

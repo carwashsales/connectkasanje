@@ -10,7 +10,7 @@ import supabase from '@/supabase/client';
 import { getUserId } from '@/lib/getUserId';
 import type { UserProfile as User } from '@/lib/types';
 import { Paperclip, Send, Loader2 } from 'lucide-react';
-import { uploadToSupabase } from '@/lib/supabase';
+import { uploadToSupabase, uploadCancelable } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
 // Firestore imports removed; this component uses Supabase now.
 import { z } from 'zod';
@@ -32,6 +32,9 @@ export function CreatePost({ user }: CreatePostProps) {
   const [attachedFile, setAttachedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const uploadCancelRef = useRef<(() => void) | null>(null);
 
   if (!authUser || !user) {
     return null;
@@ -61,13 +64,23 @@ export function CreatePost({ user }: CreatePostProps) {
       if (attachedFile) {
         try {
           setUploadProgress(0);
-          const uploaded = await uploadToSupabase(attachedFile, undefined, undefined, (pct) => setUploadProgress(pct));
+          setUploadError(null);
+          setIsUploading(true);
+          const controller = uploadCancelable(attachedFile, undefined, undefined, (pct) => setUploadProgress(pct));
+          uploadCancelRef.current = controller.cancel;
+          const uploaded = await controller.promise;
           media = { url: uploaded.publicUrl, path: uploaded.path, mime: attachedFile.type };
           setUploadProgress(null);
+          setIsUploading(false);
+          uploadCancelRef.current = null;
         } catch (err) {
           console.error('Upload failed', err);
-          toast({ title: 'Upload Error', description: (err as any)?.message || 'Could not upload attachment.', variant: 'destructive' });
+          const msg = (err as any)?.message || 'Could not upload attachment.';
+          setUploadError(msg);
+          toast({ title: 'Upload Error', description: msg, variant: 'destructive' });
           setLoading(false);
+          setIsUploading(false);
+          uploadCancelRef.current = null;
           return;
         }
       }
@@ -183,6 +196,22 @@ export function CreatePost({ user }: CreatePostProps) {
                   <div className="h-2 bg-primary" style={{ width: `${uploadProgress}%` }} />
                 </div>
                 <p className="text-xs mt-1">Uploading: {uploadProgress}%</p>
+                <div className="mt-2 flex gap-2">
+                  {isUploading && (
+                    <Button variant="ghost" size="sm" onClick={() => { uploadCancelRef.current?.(); setIsUploading(false); setUploadProgress(null); setUploadError('Upload cancelled'); }}>
+                      Cancel
+                    </Button>
+                  )}
+                  {uploadError && (
+                    <Button variant="ghost" size="sm" onClick={() => {
+                      // allow retry by clearing error; user must submit again to retry upload
+                      setUploadError(null);
+                      setUploadProgress(null);
+                    }}>
+                      Retry
+                    </Button>
+                  )}
+                </div>
               </div>
             )}
             <Button type="submit" disabled={loading} className="bg-accent text-accent-foreground hover:bg-accent/90">

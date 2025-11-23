@@ -17,7 +17,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { useSupabaseAuth as useUser } from '@/supabase/AuthProvider';
 import { Loader2 } from 'lucide-react';
-import { uploadToSupabase } from '@/lib/supabase';
+import { uploadToSupabase, uploadCancelable } from '@/lib/supabase';
 import supabase from '@/supabase/client';
 import { getUserId } from '@/lib/getUserId';
 import { z } from 'zod';
@@ -41,6 +41,10 @@ export function SellItemForm({ isOpen, onOpenChange, itemToEdit }: SellItemFormP
   const { toast } = useToast();
   const formRef = useRef<HTMLFormElement>(null);
   const [loading, setLoading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const uploadCancelRef = useRef<(() => void) | null>(null);
   const isEdit = !!itemToEdit;
 
 
@@ -94,13 +98,26 @@ export function SellItemForm({ isOpen, onOpenChange, itemToEdit }: SellItemFormP
         let media: any = null;
         if (file?.files && file.files[0]) {
           try {
-            const uploaded = await uploadToSupabase(file.files[0], 'ft');
+            setUploadProgress(0);
+            setUploadError(null);
+            setIsUploading(true);
+            const controller = uploadCancelable(file.files[0], undefined, undefined, (pct) => setUploadProgress(pct));
+            uploadCancelRef.current = controller.cancel;
+            const uploaded = await controller.promise;
             imageUrl = uploaded.publicUrl;
             imageHint = uploaded.path;
             media = { url: uploaded.publicUrl, path: uploaded.path, mime: file.files[0].type };
+            setUploadProgress(null);
+            setIsUploading(false);
+            uploadCancelRef.current = null;
           } catch (err) {
             console.error('Upload failed', err);
             toast({ title: 'Upload Error', description: 'Could not upload image. Using placeholder.', variant: 'destructive' });
+            const msg = (err as any)?.message || 'Could not upload image.';
+            setUploadError(msg);
+            setUploadProgress(null);
+            setIsUploading(false);
+            uploadCancelRef.current = null;
           }
         }
 
@@ -168,6 +185,28 @@ export function SellItemForm({ isOpen, onOpenChange, itemToEdit }: SellItemFormP
               Picture
             </Label>
       <Input id="picture" type="file" name="picture" className="col-span-3" />
+      {uploadProgress !== null && (
+        <div className="col-span-4 flex justify-center">
+          <div className="w-48">
+            <div className="h-2 bg-muted rounded overflow-hidden">
+              <div className="h-2 bg-primary" style={{ width: `${uploadProgress}%` }} />
+            </div>
+            <p className="text-xs mt-1 text-center">Uploading: {uploadProgress}%</p>
+            <div className="mt-2 flex gap-2 justify-center">
+              {isUploading && (
+                <Button variant="ghost" size="sm" onClick={() => { uploadCancelRef.current?.(); setIsUploading(false); setUploadProgress(null); setUploadError('Upload cancelled'); }}>
+                  Cancel
+                </Button>
+              )}
+              {uploadError && (
+                <Button variant="ghost" size="sm" onClick={() => { setUploadError(null); setUploadProgress(null); }}>
+                  Retry
+                </Button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
        <p className="col-span-4 text-xs text-muted-foreground text-center">
         Optional: upload an image for your listing.
       </p>

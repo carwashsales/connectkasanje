@@ -5,7 +5,7 @@ export async function POST(req: Request) {
   try {
     const form = await req.formData();
     const file = form.get('file') as any;
-    const bucket = (form.get('bucket') as string) || 'public';
+    const bucket = (form.get('bucket') as string) || process.env.NEXT_PUBLIC_SUPABASE_BUCKET || process.env.SUPABASE_BUCKET || 'hub';
     const folder = (form.get('folder') as string) || 'uploads';
 
     if (!file || typeof file.arrayBuffer !== 'function') {
