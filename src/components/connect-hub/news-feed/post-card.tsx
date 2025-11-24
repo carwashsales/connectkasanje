@@ -156,6 +156,7 @@ export function PostCard({ post }: PostCardProps) {
       const { error } = await supabase.from('posts').delete().eq('id', post.id);
       if (error) throw error;
       toast({ title: "Success", description: "Post deleted." });
+      try { window?.dispatchEvent && window.dispatchEvent(new CustomEvent('connethub:post-deleted', { detail: { id: post.id } })); } catch (e) { /* ignore */ }
     } catch (error) {
       toast({ title: "Error", description: "Failed to delete post.", variant: "destructive" });
     }

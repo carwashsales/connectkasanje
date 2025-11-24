@@ -134,6 +134,8 @@ export function ChatLayout({ conversations, currentUser, defaultConversationId }
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
   const [newMessage, setNewMessage] = useState("");
   const [attachedFile, setAttachedFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
@@ -152,6 +154,14 @@ export function ChatLayout({ conversations, currentUser, defaultConversationId }
       setSelectedConversation(null);
     }
   }, [defaultConversationId, conversations]);
+
+  useEffect(() => {
+    return () => {
+      if (previewUrl) {
+        try { URL.revokeObjectURL(previewUrl); } catch (e) { /* ignore */ }
+      }
+    };
+  }, [previewUrl]);
 
   // Start presence heartbeat for current user
   useEffect(() => {
@@ -240,6 +250,15 @@ export function ChatLayout({ conversations, currentUser, defaultConversationId }
 
       // trigger child to refetch messages
       setMessagesRefreshKey(k => k + 1);
+      // clear attached file & preview after sending
+      setAttachedFile(null);
+      if (previewUrl) {
+        try { URL.revokeObjectURL(previewUrl); } catch (e) { /* ignore */ }
+      }
+      setPreviewUrl(null);
+      if (fileInputRef.current) {
+        try { (fileInputRef.current as HTMLInputElement).value = ''; } catch (e) { /* ignore */ }
+      }
     } catch (err) {
       console.error('Error sending message', err);
       toast({ title: 'Send Error', description: 'Could not send message.', variant: 'destructive' });
@@ -322,13 +341,31 @@ export function ChatLayout({ conversations, currentUser, defaultConversationId }
             <ChatMessages conversation={selectedConversation} currentUser={currentUser} refreshKey={messagesRefreshKey} />
 
             <div className="p-4 border-t bg-card">
-              <form onSubmit={handleSendMessage} className="flex items-center gap-2">
-                <input id="message-file" type="file" className="hidden" accept="image/*,video/*" onChange={(e) => setAttachedFile(e.target.files?.[0] ?? null)} />
-                <label htmlFor="message-file">
-                  <Button type="button" variant="ghost" size="icon" className="text-muted-foreground">
-                    <Paperclip className="h-4 w-4" />
-                  </Button>
-                </label>
+              <form onSubmit={handleSendMessage} className="flex items-center gap-2" onDrop={(e) => { e.preventDefault(); const f = e.dataTransfer?.files?.[0] ?? null; if (f) { setAttachedFile(f); setPreviewUrl(URL.createObjectURL(f)); } }} onDragOver={(e) => e.preventDefault()}>
+                <input id="message-file" ref={fileInputRef} type="file" className="hidden" accept="image/*,video/*" onChange={(e) => { const f = e.target.files?.[0] ?? null; setAttachedFile(f); if (f) setPreviewUrl(URL.createObjectURL(f)); }} />
+                <Button type="button" variant="ghost" size="icon" className="text-muted-foreground" onClick={() => fileInputRef.current?.click()}>
+                  <Paperclip className="h-4 w-4" />
+                </Button>
+                {previewUrl && (
+                  <div className="ml-2">
+                    <div
+                      role="button"
+                      tabIndex={0}
+                      aria-label="Remove attachment"
+                      onClick={() => { setAttachedFile(null); if (previewUrl) { try { URL.revokeObjectURL(previewUrl); } catch (e) { } } setPreviewUrl(null); }}
+                      onKeyDown={(ev) => { if (ev.key === 'Enter' || ev.key === ' ' || ev.key === 'Delete' || ev.key === 'Backspace') { ev.preventDefault(); setAttachedFile(null); if (previewUrl) { try { URL.revokeObjectURL(previewUrl); } catch (e) { } } setPreviewUrl(null); } }}
+                      className="h-10 w-10 rounded overflow-hidden ring-1 ring-ring cursor-pointer"
+                      title="Click or press Delete to remove attachment"
+                    >
+                      {attachedFile?.type?.startsWith('image') ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={previewUrl as string} alt="preview" className="h-10 w-10 object-cover" />
+                      ) : (
+                        <video src={previewUrl as string} className="h-10 w-10 object-cover" />
+                      )}
+                    </div>
+                  </div>
+                )}
                 {uploadProgress !== null && (
                   <div className="ml-2 w-28">
                     <div className="h-2 bg-muted rounded overflow-hidden">

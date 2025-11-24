@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -28,6 +28,7 @@ type CreatePostProps = {
 export function CreatePost({ user, onPosted }: CreatePostProps) {
   const { user: authUser } = useUser();
   const formRef = useRef<HTMLFormElement>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [attachedFile, setAttachedFile] = useState<File | null>(null);
@@ -36,6 +37,14 @@ export function CreatePost({ user, onPosted }: CreatePostProps) {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const uploadCancelRef = useRef<(() => void) | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (previewUrl) {
+        try { URL.revokeObjectURL(previewUrl); } catch (e) { /* ignore */ }
+      }
+    };
+  }, [previewUrl]);
 
   if (!authUser || !user) {
     return null;
@@ -111,17 +120,19 @@ export function CreatePost({ user, onPosted }: CreatePostProps) {
       let moderationResult = { isAppropriate: true, reason: 'not-run' } as any;
       try {
         // Call server moderation endpoint. If that fails, allow the post and
-        // mark it for later moderation.
+        // mark it for later moderation. Use warnings instead of errors so the
+        // development overlay doesn't interrupt posting when the moderation
+        // service is not configured.
         const mres = await fetch('/api/moderate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: content }) });
         if (mres.ok) {
           const mp = await mres.json().catch(() => ({}));
           moderationResult = mp?.data ?? { isAppropriate: true, reason: 'not-run' };
         } else {
-          console.error('Moderation API returned non-OK', await mres.text());
+          console.warn('Moderation API returned non-OK', await mres.text());
           moderationResult = { isAppropriate: true, reason: 'moderation-service-unavailable' };
         }
       } catch (modErr) {
-        console.error('Moderation call failed, allowing post and flagging for review', modErr);
+        console.warn('Moderation call failed, allowing post and flagging for review', modErr);
         moderationResult = { isAppropriate: true, reason: 'moderation-service-unavailable' };
       }
       if (!moderationResult.isAppropriate) {
@@ -134,7 +145,7 @@ export function CreatePost({ user, onPosted }: CreatePostProps) {
         return;
       }
     } catch (error) {
-      console.error('Error moderating post:', error);
+      console.warn('Error moderating post:', error);
       toast({
         title: 'Error',
         description: 'Could not moderate post content.',
@@ -178,11 +189,20 @@ export function CreatePost({ user, onPosted }: CreatePostProps) {
       toast({ title: 'Success', description: 'Post created successfully.' });
       formRef.current?.reset();
       setUploadProgress(null);
-      if (typeof onPosted === 'function') {
-        try { onPosted(newPost); } catch (e) { /* ignore */ }
-      } else {
-        try { window?.dispatchEvent(new CustomEvent('connethub:post-created', { detail: newPost })); } catch (e) { /* ignore */ }
+      // clear attached file & preview after successful post so the composer is reset
+      setAttachedFile(null);
+      if (previewUrl) {
+        try { URL.revokeObjectURL(previewUrl); } catch (e) { /* ignore */ }
       }
+      setPreviewUrl(null);
+      if (fileInputRef.current) {
+        try { (fileInputRef.current as HTMLInputElement).value = ''; } catch (e) { /* ignore */ }
+      }
+      // Do not directly insert the final created post into the local feed here.
+      // The feed is subscribed to realtime INSERT events and will receive the
+      // final post from the server. Emitting the final post here in addition
+      // to the realtime event caused duplicate posts. We only emit the
+      // `post-replaced` event to remove the optimistic placeholder.
       // remove any optimistic posts that match the tempId/content
       try { window?.dispatchEvent(new CustomEvent('connethub:post-replaced', { detail: { tempId, finalId: newPost.id } })); } catch (e) { /* ignore */ }
     } catch (error: any) {
@@ -193,10 +213,50 @@ export function CreatePost({ user, onPosted }: CreatePostProps) {
     }
   };
 
-  return (
+    const handlePaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+      // handle paste events: if there is a file in clipboard, attach it
+      try {
+        const files = e.clipboardData?.files;
+        if (files && files.length > 0) {
+          const f = files[0];
+          setAttachedFile(f);
+          setPreviewUrl(URL.createObjectURL(f));
+          e.preventDefault();
+        } else if (e.clipboardData) {
+          // some browsers place images as items
+          const items = Array.from(e.clipboardData.items || []);
+          const imageItem = items.find(i => i.kind === 'file');
+          if (imageItem) {
+            const blob = imageItem.getAsFile();
+            if (blob) {
+              setAttachedFile(blob);
+              setPreviewUrl(URL.createObjectURL(blob));
+              e.preventDefault();
+            }
+          }
+        }
+      } catch (err) {
+        // ignore
+      }
+    };
+
+    const handleDrop = (e: React.DragEvent<HTMLFormElement>) => {
+      e.preventDefault();
+      try {
+        const f = e.dataTransfer?.files?.[0] ?? null;
+        if (f) {
+          setAttachedFile(f);
+          setPreviewUrl(URL.createObjectURL(f));
+        }
+      } catch (err) { /* ignore */ }
+    };
+
+    const handleDragOver = (e: React.DragEvent) => { e.preventDefault(); };
+
+    return (
     <Card className="shadow-sm">
       <CardContent className="p-4">
-        <form onSubmit={handleSubmit} ref={formRef}>
+        <form onSubmit={handleSubmit} ref={formRef} onDrop={handleDrop} onDragOver={handleDragOver}>
           <div className="flex items-start gap-4">
             <Avatar>
               <AvatarImage src={user?.avatar?.url} alt={user?.name} data-ai-hint={user?.avatar?.hint} />
@@ -207,6 +267,7 @@ export function CreatePost({ user, onPosted }: CreatePostProps) {
                 name="content"
                 placeholder="What's on your mind?"
                 className="w-full border-0 focus-visible:ring-0 focus-visible:ring-offset-0 p-0 shadow-none min-h-[60px]"
+                onPaste={handlePaste}
                 required
               />
             </div>
@@ -214,6 +275,7 @@ export function CreatePost({ user, onPosted }: CreatePostProps) {
             <div className="mt-4 flex justify-between items-center">
               <input
                 id="post-attachment"
+                ref={fileInputRef}
                 type="file"
                 accept="image/*,video/*"
                 className="hidden"
@@ -223,20 +285,28 @@ export function CreatePost({ user, onPosted }: CreatePostProps) {
                   if (f) setPreviewUrl(URL.createObjectURL(f));
                 }}
               />
-              <label htmlFor="post-attachment">
-                <Button type="button" variant="ghost" size="icon" className="text-muted-foreground">
-                  <Paperclip className="h-5 w-5" />
-                  <span className="sr-only">Attach file</span>
-                </Button>
-              </label>
+              <Button type="button" variant="ghost" size="icon" className="text-muted-foreground" onClick={() => fileInputRef.current?.click()}>
+                <Paperclip className="h-5 w-5" />
+                <span className="sr-only">Attach file</span>
+              </Button>
               {previewUrl && (
                 <div className="ml-3">
-                  {attachedFile?.type.startsWith('image') ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={previewUrl} alt="preview" className="h-12 w-12 object-cover rounded" />
-                  ) : (
-                    <video src={previewUrl} className="h-12 w-12 object-cover rounded" />
-                  )}
+                  <div
+                    role="button"
+                    tabIndex={0}
+                    aria-label="Remove attachment"
+                    onClick={() => { setAttachedFile(null); if (previewUrl) { try { URL.revokeObjectURL(previewUrl); } catch (e) { } } setPreviewUrl(null); }}
+                    onKeyDown={(ev) => { if (ev.key === 'Enter' || ev.key === ' ' || ev.key === 'Delete' || ev.key === 'Backspace') { ev.preventDefault(); setAttachedFile(null); if (previewUrl) { try { URL.revokeObjectURL(previewUrl); } catch (e) { } } setPreviewUrl(null); } }}
+                    className="h-12 w-12 rounded overflow-hidden ring-1 ring-ring cursor-pointer"
+                    title="Click or press Delete to remove attachment"
+                  >
+                    {attachedFile?.type.startsWith('image') ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={previewUrl as string} alt="preview" className="h-12 w-12 object-cover" />
+                    ) : (
+                      <video src={previewUrl as string} className="h-12 w-12 object-cover" />
+                    )}
+                  </div>
                 </div>
               )}
             {uploadProgress !== null && (

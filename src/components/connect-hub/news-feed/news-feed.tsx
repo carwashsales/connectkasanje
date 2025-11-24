@@ -154,13 +154,21 @@ export function NewsFeed() {
       });
     };
 
+    const deletedHandler = (e: any) => {
+      const id = e?.detail?.id;
+      if (!id) return;
+      setPosts((prev) => (prev || []).filter((p) => p.id !== id));
+    };
+
     window?.addEventListener && window.addEventListener('connethub:post-created', createdHandler);
     window?.addEventListener && window.addEventListener('connethub:post-failed', failedHandler);
     window?.addEventListener && window.addEventListener('connethub:post-replaced', replacedHandler);
+    window?.addEventListener && window.addEventListener('connethub:post-deleted', deletedHandler);
     return () => {
       window?.removeEventListener && window.removeEventListener('connethub:post-created', createdHandler);
       window?.removeEventListener && window.removeEventListener('connethub:post-failed', failedHandler);
       window?.removeEventListener && window.removeEventListener('connethub:post-replaced', replacedHandler);
+      window?.removeEventListener && window.removeEventListener('connethub:post-deleted', deletedHandler);
     };
   }, []);
 
