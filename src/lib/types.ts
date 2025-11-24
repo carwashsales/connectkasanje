@@ -30,7 +30,7 @@ export type Post = {
   id: string;
   authorId: string;
   content: string;
-  image?: { url: string; hint: string };
+  image?: { url: string; hint: string; mime?: string };
   createdAt: Timestamp;
   likes: number;
   likedBy: string[];

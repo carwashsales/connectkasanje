@@ -207,13 +207,18 @@ export function PostCard({ post }: PostCardProps) {
       </CardContent>
       {post.image && (
         <div className="relative h-64 md:h-80 w-full mt-2">
-          <Image
-            src={post.image.url}
-            alt="Post image"
-            fill
-            className="object-cover"
-            data-ai-hint={post.image.hint}
-          />
+          {post.image.mime?.startsWith('video') ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <video src={post.image.url} className="w-full h-full object-cover" controls playsInline />
+          ) : (
+            <Image
+              src={post.image.url}
+              alt="Post image"
+              fill
+              className="object-cover"
+              data-ai-hint={post.image.hint}
+            />
+          )}
         </div>
       )}
       <CardFooter className="p-2 flex justify-between items-center bg-secondary/20">

@@ -101,6 +101,10 @@ export function CreatePost({ user, onPosted }: CreatePostProps) {
           uploadCancelRef.current = controller.cancel;
           const uploaded = await controller.promise;
           media = { url: uploaded.publicUrl, path: uploaded.path, mime: attachedFile.type };
+          // Update the optimistic post in the feed so it shows the uploaded public URL and MIME
+          try {
+            window?.dispatchEvent && window.dispatchEvent(new CustomEvent('connethub:post-updated', { detail: { tempId, update: { image: { url: uploaded.publicUrl, hint: uploaded.path, mime: attachedFile.type } } } }));
+          } catch (e) { /* ignore */ }
           setUploadProgress(null);
           setIsUploading(false);
           uploadCancelRef.current = null;
@@ -180,7 +184,7 @@ export function CreatePost({ user, onPosted }: CreatePostProps) {
         id: created?.id,
         authorId: created?.user_id,
         content: created?.body ?? created?.title ?? content,
-        image: created?.media ? { url: created.media.url, hint: created.media.path } : media ? { url: media.url, hint: media.path } : undefined,
+        image: created?.media ? { url: created.media.url, hint: created.media.path, mime: created.media?.mime } : media ? { url: media.url, hint: media.path, mime: media.mime } : undefined,
         createdAt: { toDate: () => new Date(created?.created_at || new Date().toISOString()) },
         likes: created?.metadata?.likes ?? 0,
         likedBy: created?.metadata?.likedBy ?? [],
@@ -189,6 +193,10 @@ export function CreatePost({ user, onPosted }: CreatePostProps) {
       toast({ title: 'Success', description: 'Post created successfully.' });
       formRef.current?.reset();
       setUploadProgress(null);
+      // Emit the final created post so the feed can show it immediately.
+      // NewsFeed deduplicates by id to avoid duplicate entries when realtime
+      // INSERT also arrives.
+      try { window?.dispatchEvent && window.dispatchEvent(new CustomEvent('connethub:post-created', { detail: newPost })); } catch (e) { /* ignore */ }
       // clear attached file & preview after successful post so the composer is reset
       setAttachedFile(null);
       if (previewUrl) {
@@ -304,7 +312,7 @@ export function CreatePost({ user, onPosted }: CreatePostProps) {
                       // eslint-disable-next-line @next/next/no-img-element
                       <img src={previewUrl as string} alt="preview" className="h-12 w-12 object-cover" />
                     ) : (
-                      <video src={previewUrl as string} className="h-12 w-12 object-cover" />
+                      <video src={previewUrl as string} className="h-12 w-12 object-cover" controls playsInline muted />
                     )}
                   </div>
                 </div>

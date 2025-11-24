@@ -78,7 +78,7 @@ export function NewsFeed() {
           id: p.id,
           authorId: p.user_id,
           content: p.body ?? p.title ?? '',
-          image: p.media ? { url: p.media.url, hint: p.media.path } : undefined,
+          image: p.media ? { url: p.media.url, hint: p.media.path, mime: p.media.mime } : undefined,
           createdAt: { toDate: () => new Date(p.created_at) } as any,
           likes: p.metadata?.likes ?? 0,
           likedBy: p.metadata?.likedBy ?? [],
@@ -104,11 +104,12 @@ export function NewsFeed() {
     setPosts((prev) => {
       const current = prev || [];
       if (ev === 'INSERT') {
+        if (current.some((p) => p.id === record.id)) return current;
         const p: Post = {
           id: record.id,
           authorId: record.user_id,
           content: record.body ?? record.title ?? '',
-          image: record.media ? { url: record.media.url, hint: record.media.path } : undefined,
+          image: record.media ? { url: record.media.url, hint: record.media.path, mime: record.media?.mime } : undefined,
           createdAt: { toDate: () => new Date(record.created_at) } as any,
           likes: record.metadata?.likes ?? 0,
           likedBy: record.metadata?.likedBy ?? [],
@@ -131,8 +132,13 @@ export function NewsFeed() {
     const createdHandler = (e: any) => {
       const detail = e?.detail;
       if (!detail) return;
+      // Ensure the created detail has an id for stable React keys
+      if (!detail.id) {
+        try { detail.id = `temp-${Date.now()}-${Math.random().toString(36).slice(2,8)}`; } catch (e) { detail.id = `temp-${Date.now()}`; }
+      }
       setPosts((prev) => {
         const cur = prev || [];
+        if (cur.some((p) => p.id === detail.id)) return cur;
         return [detail, ...cur];
       });
     };
@@ -141,6 +147,13 @@ export function NewsFeed() {
       const detail = e?.detail;
       if (!detail?.tempId) return;
       setPosts((prev) => (prev || []).filter((p) => p.id !== detail.tempId));
+    };
+
+    const updatedHandler = (e: any) => {
+      const tempId = e?.detail?.tempId;
+      const update = e?.detail?.update;
+      if (!tempId || !update) return;
+      setPosts((prev) => (prev || []).map((p) => p.id === tempId ? { ...p, ...(update || {}) } : p));
     };
 
     const replacedHandler = (e: any) => {
@@ -164,11 +177,13 @@ export function NewsFeed() {
     window?.addEventListener && window.addEventListener('connethub:post-failed', failedHandler);
     window?.addEventListener && window.addEventListener('connethub:post-replaced', replacedHandler);
     window?.addEventListener && window.addEventListener('connethub:post-deleted', deletedHandler);
+    window?.addEventListener && window.addEventListener('connethub:post-updated', updatedHandler);
     return () => {
       window?.removeEventListener && window.removeEventListener('connethub:post-created', createdHandler);
       window?.removeEventListener && window.removeEventListener('connethub:post-failed', failedHandler);
       window?.removeEventListener && window.removeEventListener('connethub:post-replaced', replacedHandler);
       window?.removeEventListener && window.removeEventListener('connethub:post-deleted', deletedHandler);
+      window?.removeEventListener && window.removeEventListener('connethub:post-updated', updatedHandler);
     };
   }, []);
 
@@ -180,7 +195,7 @@ export function NewsFeed() {
            Array.from({ length: 3 }).map((_, i) => <PostSkeleton key={i} />)
         ) : (
           posts?.map((post, index) => (
-            <React.Fragment key={post.id}>
+            <React.Fragment key={post.id ?? `post-${index}`}>
               {index === 2 && <AdBanner id="news-feed-ad" />}
               <PostCard post={post} />
             </React.Fragment>

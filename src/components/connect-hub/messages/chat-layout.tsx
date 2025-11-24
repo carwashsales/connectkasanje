@@ -361,7 +361,7 @@ export function ChatLayout({ conversations, currentUser, defaultConversationId }
                         // eslint-disable-next-line @next/next/no-img-element
                         <img src={previewUrl as string} alt="preview" className="h-10 w-10 object-cover" />
                       ) : (
-                        <video src={previewUrl as string} className="h-10 w-10 object-cover" />
+                        <video src={previewUrl as string} className="h-10 w-10 object-cover" controls playsInline muted />
                       )}
                     </div>
                   </div>

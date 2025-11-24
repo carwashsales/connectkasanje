@@ -16,7 +16,7 @@ type UploadCancelable = {
 export function uploadCancelable(file: File, bucket = DEFAULT_BUCKET, folder = 'uploads', onProgress?: (pct: number) => void): UploadCancelable {
   if (!supabaseClient) throw new Error('Supabase client not initialized');
 
-  const maxBytes = 10 * 1024 * 1024; // 10MB
+  const maxBytes = 50 * 1024 * 1024; // 50MB - allow short videos
   if (file.size > maxBytes) {
     return { promise: Promise.reject(new Error('File size exceeds 10MB limit')), cancel: () => {} };
   }
@@ -119,7 +119,7 @@ export async function uploadToSupabase(file: File, bucket = DEFAULT_BUCKET, fold
 }
 
 export function validateUploadFile(file: File, options?: { maxBytes?: number, accept?: string[] }) {
-  const maxBytes = options?.maxBytes ?? 10 * 1024 * 1024;
+  const maxBytes = options?.maxBytes ?? 50 * 1024 * 1024;
   if (file.size > maxBytes) return { valid: false, reason: 'File too large' };
   if (options?.accept && !options.accept.some(prefix => file.type.startsWith(prefix))) return { valid: false, reason: 'Unsupported type' };
   return { valid: true };
